@@ -1,0 +1,17 @@
+#ifndef SUPPORT_CAN_H_
+#define SUPPORT_CAN_H_
+
+#define MCAN_COUNT            1
+#define MCAN_START_ADDR       (0x0005C400UL)
+#define MCAN_INCREMENT_ADDR   (0x00002000UL)
+#define MCAN_MSG_RAM_START_ADDR     (0x00058000UL)
+#define MCAN_MSG_RAM_INCREMENT_ADDR (0x00000000UL)
+#define MCAN_MSG_RAM_DEPTH_BYTE     (0x00002000UL)
+
+
+enum MCAN
+{
+    MCAN_A = 0
+};
+
+#endif
