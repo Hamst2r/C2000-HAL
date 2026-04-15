@@ -122,7 +122,7 @@ void XBAR_Output_SetupInvert(enum XBAR_Output output, bool invert)
 
 #define XBAR_CLB_CONFIG(xbar,src)   ( REG32( XBAR_CLB_BASE + 0x00 + (xbar) * 4 + ((src) >> 6) * 2 ) )
 #define XBAR_CLB_ENABLE(xbar)       ( REG32( XBAR_CLB_BASE + 0x20 + (xbar) * 2) )
-#define XBAR_CLB_INVERT(xbar)       ( REG16( XBAR_CLB_BASE + 0x38 ) )
+#define XBAR_CLB_INVERT             ( REG16( XBAR_CLB_BASE + 0x38 ) )
 
 
 void XBAR_CLB_SetupSource(enum XBAR_CLB xbar, enum XBAR_CLBSrc source)
@@ -143,7 +143,7 @@ void XBAR_CLB_SetupInvert(enum XBAR_CLB xbar, bool invert)
     } 
     else
     {
-        XBAR_CLB_INVERT &= ~(1U << trip);
+        XBAR_CLB_INVERT &= ~(1U << xbar);
     }
 }
 
