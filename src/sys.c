@@ -1,8 +1,6 @@
 #include "sys.h"
+#include "sys_private.h"
 #include <string.h>
-
-
-#define SIMRESET    ( REG32( CPU_BASE + 0x70 ) )
 
 #ifndef CMDTOOL
 extern uint16_t RamfuncsLoadStart;
