@@ -180,6 +180,3 @@
 #endif  // end of non-TI compilers
 
 #endif // end of BASE_H
-
-
-#endif /* BASE_H_ */
