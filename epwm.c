@@ -199,7 +199,8 @@ void EPWM_Advanced_SetupDcEventCondition(enum EPWM module, enum EPWM_DcEvent eve
 void EPWM_SetupDcEventSource(enum EPWM module, enum EPWM_DcEvent event, enum EPWM_DcSrc src)
 {
     // DCxH -> DCxEVT1, DCxL -> DCxEVT2, active high
-    enum EPWM_DcCondition condition = (enum EPWM_DcCondition) ((event & 0x01U) << 1 + 2);
+    enum EPWM_DcCondition condition = (event & 0x01U) ? EPWM_DcCondition_L1 : EPWM_DcCondition_H1;
+    // enum EPWM_DcCondition condition = (enum EPWM_DcCondition) (((event & 0x01U) << 1) + 2);
     
     EPWM_Advanced_SetupDcInputSource(module, (enum EPWM_DcCmp) event, src);
     EPWM_Advanced_SetupDcEventCondition(module, event, condition);

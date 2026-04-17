@@ -233,7 +233,7 @@ enum EPWM_DcEvent
 enum EPWM_DcEvtSync
 {
     EPWM_DcEvtSync_Sync  = 0,   // DC Event Trip is synchronized with EPWMCLK
-    EPWM_DcEvtSync_Async = 0    // DC Event Trip is asynchronous
+    EPWM_DcEvtSync_Async = 1    // DC Event Trip is asynchronous
 };
 
 enum EPWM_DcEvtLatch
