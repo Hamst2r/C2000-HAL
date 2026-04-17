@@ -1,9 +1,6 @@
 #ifndef BASE_H_
 #define BASE_H_
 
-#ifndef BASE_H
-#define BASE_H
-
 // ########################################################
 //
 // For all compilers (TI or non-TI)
@@ -13,60 +10,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// #ifndef uint8
-//     #define uint8 uint16_t
-// #endif
-
-// #ifndef uint16
-//     #define uint16 uint16_t
-// #endif
-
-// #ifndef int16
-//     #define int16 int16_t
-// #endif
-
-// #ifndef uint32
-//     #define uint32 uint32_t
-// #endif
-
-// #ifndef uint64
-//     #define uint64 uint32_t
-// #endif
-
-// #ifndef int32
-//     #define int32 int32_t
-// #endif
-
-// #ifndef float32
-//     #define float32 float32_t
-// #endif
-
-// #ifndef boolean
-//     #define boolean uint16_t
-// #endif
-
-#ifndef local
-    #define local static
-#endif
-
-#ifndef global
-    #define global
-#endif
-
-#ifndef true
-    #define true 1
-#endif
-
-#ifndef false
-    #define false 0
-#endif
 
 #ifndef NULL
     #define NULL 0
-#endif
-
-#ifndef EDIS
-    #define EDIS    // disables registers without warning, so not functional
 #endif
 
 #if defined(__TMS320C28XX_CLA__)
@@ -77,18 +23,21 @@
     #define REG16(x)    (*((volatile uint16_t *)(x)))
 #endif
 
+// Bitfield Masks
+#define MASK(bitWidth)   ((1UL << (bitWidth)) - 1UL)
 
-// A value of ADJUST_FOR_1US = 4 and microseconds = 10 measured
-// 9.68us with the scope by GPIO toggling.
-#define ADJUST_FOR_1US      4
-#define DELAY_US(usec) do{ \
-    static volatile uint16 ixAdjst = 0;\
-    for(uint32 loopval = (usec); loopval > 0; loopval--){\
-        for(ixAdjst = ADJUST_FOR_1US; ixAdjst > 0; ixAdjst--);\
-        __asm(" NOP");\
-        __asm(" NOP");\
-        __asm(" NOP");}\
-    } while(0)
+
+// // A value of ADJUST_FOR_1US = 4 and microseconds = 10 measured
+// // 9.68us with the scope by GPIO toggling.
+// #define ADJUST_FOR_1US      4
+// #define DELAY_US(usec) do{ \
+//     static volatile uint16 ixAdjst = 0;\
+//     for(uint32 loopval = (usec); loopval > 0; loopval--){\
+//         for(ixAdjst = ADJUST_FOR_1US; ixAdjst > 0; ixAdjst--);\
+//         __asm(" NOP");\
+//         __asm(" NOP");\
+//         __asm(" NOP");}\
+//     } while(0)
 
 #ifdef __TI_COMPILER_VERSION__  // TI C28x or CLA
 #ifdef __TMS320C28XX_CLA__     // CLA compiler
@@ -98,7 +47,6 @@
     //
     // ########################################################
 
-    #include <hw_types.h>
 
     #ifndef EALLOW
         #define EALLOW __meallow()       // allow access to EALLOW-protected registers
@@ -113,7 +61,6 @@
     //
     // ########################################################
 
-    #include <hw_types.h>
 
     #ifndef EALLOW
         #define EALLOW __eallow()       // allow access to EALLOW-protected registers
@@ -159,8 +106,6 @@
         PRAGMA(DATA_SECTION(variable, #section))    // place variable in section
 
     // Atomic read to 32-bit peripheral register
-    #define ATOMIC_32(x)    __byte_peripheral_32((uint32_t *)&(x))
-
     #define ATOMIC32(x)     __byte_peripheral_32((uint32_t *)(x))
     
     #define REG8(x)         __byte((int16_t *)(x),0)
@@ -218,8 +163,6 @@
     #define VAR_IN_SECTION(variable, section) // place variable in section
 
     // Atomic read to 32-bit peripheral register
-    #define ATOMIC_32(x)    (*(uint32_t *)&(x))
-
     #define ATOMIC32(x)     (*(uint32_t *)(x))
 
     #define REG8(x)         (*(int8_t *)(x))
