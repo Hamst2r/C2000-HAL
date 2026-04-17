@@ -295,8 +295,7 @@ enum ADC_Trig EPWM_SetupBasicAdcTimer(enum EPWM module, float freqHz)
     if( (period32 & 0xFFFF0000) != 0 )
     {
         // Frequency is too low. Please configure clock divider using EPWM_SetupClkDiv()
-        ESTOP0;
-        while(1);
+        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)module, (uint32_t)freqHz);
     }
 
     period = (uint16_t)(period32 & 0x0000FFFF);
@@ -340,8 +339,7 @@ float EPWM_SetupUpDown_Complementary(enum EPWM module, float freq, float duty, f
     if( (period32 & 0xFFFF0000) != 0 )
     {
         // Frequency is too low. Please configure clock divider using EPWM_SetupClkDiv()
-        ESTOP0;
-        while(1);
+        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)module, (uint32_t)freq);
     }
 
     period = (uint16_t)(period32 & 0x0000FFFF);
@@ -408,8 +406,7 @@ enum ADC_Trig EPWM_SetupAdcTrigger(enum EPWM module, enum EPWM_SOC soc, enum EPW
     if(prescaler > 15)
     {
         // Prescaler should be no greater than 15. Stopping execution
-        ESTOP0;
-        while(1);
+        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)prescaler, 15U);
     }
     else if(prescaler == 0)
     {

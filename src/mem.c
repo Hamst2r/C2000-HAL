@@ -8,8 +8,7 @@ void MEM_SetLsRamMode(enum MEM_Sect section, enum MEM_LsRamMode mode)
     if(MEM_GetType(section) != MEM_Type_LS)
     {
         // Non-LSRAM section passed into the function. Stop execution
-        ESTOP0;
-        while(1);
+        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)section, (uint32_t)mode);
     }
 
     if(sectNum == MEM_SECT_NUM_ALL)

@@ -179,4 +179,7 @@
 
 #endif  // end of non-TI compilers
 
+#include "error.h"
+
+
 #endif // end of BASE_H

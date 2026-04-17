@@ -59,8 +59,7 @@ void CLA_SetupTask(enum CLA_Task task, enum CLA_Trig trigger, void* taskAddr)
     if(CLA_MVECT(task) != 0)
     {
         // Resource conflict: CLA Task. Stop execution
-        ESTOP0;
-        while(1);
+        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)task, (uint32_t)trigger);
     }
 
     CLA_SRCSEL(task) =  CLA_SRCSEL(task)

@@ -128,7 +128,7 @@ static void CLK_SelectClkSrc(enum CLK_Src source)
             // // an appropriate error-handling routine.
             while(CLK_IsClockFailDetected())
             {
-                ESTOP0;
+                HAL_FATAL(HAL_ErrorCode_HardwareFault, (uint32_t)CLK_Src_EXT, 0U);
             }
             CLK_status.sourceMHz = CLK_status.extMHz;
             break;
@@ -382,8 +382,7 @@ bool CLK_SetupClkConfig(enum CLK_CFG config)
             // Connect PLL output to system clock
             CLK_SYSPLLCTL1 |= CLK_M_SYSPLLCTL1_PLLCLKEN;
         } else {
-//            ESTOP0; // There is problem with clock initialization, stop the code
-            while(1);
+            HAL_FATAL(HAL_ErrorCode_HardwareFault, (uint32_t)config, 1U);
         }
     }
     CLK_UpdateFreqTable();

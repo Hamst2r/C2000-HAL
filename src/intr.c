@@ -213,8 +213,7 @@ static void INTR_ClearIFR(uint16_t mask)
             //
             // Invalid mask.
             //
-            ESTOP0;
-            while(1);
+            HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)mask, 0U);
     }
 }
 
@@ -261,11 +260,7 @@ void INTR_DefaultHandler(void)
     // handler function has occurred. To help you debug the issue, local
     // variable vectID contains the vector ID of the interrupt that occurred.
     //
-    ESTOP0;
-    for(;;)
-    {
-        ;
-    }
+    HAL_FATAL(HAL_ErrorCode_UnexpectedState, (uint32_t)vectID, 0U);
 }
 
 //*****************************************************************************
@@ -290,11 +285,7 @@ void INTR_IllegalOperationHandler(void)
     // Something has gone wrong.  The CPU has tried to execute an illegal
     // instruction, generating an illegal instruction trap (ITRAP).
     //
-    ESTOP0;
-    for(;;)
-    {
-        ;
-    }
+    HAL_FATAL(HAL_ErrorCode_HardwareFault, 0x49545241UL, 0U);
 }
 
 //*****************************************************************************
@@ -319,9 +310,5 @@ void INTR_NmiHandler(void)
     // has occurred in the system.  You can use SysCtl_getNMIFlagStatus() to
     // to read the NMIFLG register and determine what caused the NMI.
     //
-    ESTOP0;
-    for(;;)
-    {
-        ;
-    }
+    HAL_FATAL(HAL_ErrorCode_HardwareFault, 0x4E4D4920UL, 0U);
 }
