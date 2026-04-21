@@ -1,6 +1,7 @@
 #include "mcan.h"
 #include "base.h"
 #include "clk.h"
+#include "mcan_private.h"
 #include "timer.h"
 #include <math.h>
 
@@ -790,19 +791,9 @@ bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message)
  * @return true Selected FIFO is empty.
  * @return false Selected FIFO has at least one pending message.
  */
-static bool MCAN_IsRxFIFOEmpty(enum MCAN mcan, enum MCAN_Rx rx)
+static inline bool MCAN_IsRxFIFOEmpty(enum MCAN mcan, enum MCAN_Rx rx)
 {
-    switch (rx)
-    {
-        case MCAN_Rx_FIFO0:
-            return (MCAN_RXF0S(mcan) & MCAN_M_RXF0S_F0FL) == 0;
-
-        case MCAN_Rx_FIFO1:
-            return (MCAN_RXF1S(mcan) & MCAN_M_RXF1S_F1FL) == 0;
-
-        default:
-            return false;
-    }
+    return (MCAN_RXFxS(mcan, rx) & MCAN_M_RXFxS_FxFL) == 0;
 }
 
 /**
@@ -825,7 +816,7 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
     {
         case MCAN_Rx_FIFO0:
             // Get read index from RXF0S register
-            getIndex = (MCAN_RXF0S(mcan) & MCAN_M_RXF0S_F0GI) >> 8;
+            getIndex = (MCAN_RXFxS(mcan, MCAN_Rx_FIFO0) & MCAN_M_RXFxS_FxGI) >> 8;
 
             elementAddr = MCAN_MSG_RAM_BASE(mcan)
                         + MCAN_status[mcan].msgRam.startAddr.rxFIFO0
@@ -834,7 +825,7 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
         
         case MCAN_Rx_FIFO1:
             // Get read index from RXF1S register
-            getIndex = (MCAN_RXF1S(mcan) & MCAN_M_RXF1S_F1GI) >> 8;
+            getIndex = (MCAN_RXFxS(mcan, MCAN_Rx_FIFO1) & MCAN_M_RXFxS_FxGI) >> 8;
 
             elementAddr = MCAN_MSG_RAM_BASE(mcan)
                         + MCAN_status[mcan].msgRam.startAddr.rxFIFO1
@@ -870,6 +861,7 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
     dataLengthWord = (dataLengthByte + 3U) >> 2;
     if(dataLengthByte > MCAN_MAX_DATA_BYTES)
     {
+        // Message length exceeds maximum data bytes. Stop execution
         // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
         ESTOP0;
         while(1);
@@ -880,12 +872,8 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
         message->data[i] = ATOMIC32(elementAddr + 8U + ((uint32_t)i * 4U));
     }
 
-    if(rx == MCAN_Rx_FIFO0)
-    {
-        MCAN_RXF0A(mcan) = MCAN_S_RXF0A_F0AI(getIndex);
-    } else {
-        MCAN_RXF1A(mcan) = MCAN_S_RXF1A_F1AI(getIndex);
-    }
+    
+    MCAN_RXFxA(mcan, rx) = MCAN_S_RXFxA_FxAI(getIndex);
 }
 
 /**

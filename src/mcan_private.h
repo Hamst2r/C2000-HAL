@@ -1,6 +1,8 @@
 #ifndef MCAN_PRIVATE_H_
 #define MCAN_PRIVATE_H_
 
+#include "base.h"
+
 // Submodule base addresses
 #define MCAN_SS_BASE(mcan)          (MCAN_SS_START_ADDR + MCAN_SS_INCREMENT_ADDR * (mcan))
 #define MCAN_BASE(mcan)             (MCAN_START_ADDR + MCAN_INCREMENT_ADDR * (mcan))
@@ -21,8 +23,8 @@
 #define MCANSS_IE(mcan)    ATOMIC32(MCAN_SS_BASE(mcan) + 0x18)  // MCAN Subsystem Interrupt Enable Register
 #define MCANSS_IES(mcan)   ATOMIC32(MCAN_SS_BASE(mcan) + 0x1C)  // MCAN Subsystem Interrupt Enable Status
 #define MCANSS_EOI(mcan)   ATOMIC32(MCAN_SS_BASE(mcan) + 0x20)  // MCAN Subsystem End of Interrupt
-#define MCANSS_EXT_TS_PRESCALER(mcan)              ATOMIC32(MCAN_BASE(mcan) + 0x24) // MCAN Subsystem External Timestamp Prescaler 0
-#define MCANSS_EXT_TS_UNSERVICED_INTR_CNTR(mcan)   ATOMIC32(MCAN_BASE(mcan) + 0x28) // MCAN Subsystem External Timestamp Unserviced Interrupts Counter
+#define MCANSS_EXT_TS_PRESCALER(mcan)              ATOMIC32(MCAN_SS_BASE(mcan) + 0x24) // MCAN Subsystem External Timestamp Prescaler 0
+#define MCANSS_EXT_TS_UNSERVICED_INTR_CNTR(mcan)   ATOMIC32(MCAN_SS_BASE(mcan) + 0x28) // MCAN Subsystem External Timestamp Unserviced Interrupts Counter
 
 #define MCAN_CREL(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0x00)    // MCAN Core Release Register
 #define MCAN_ENDN(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0x04)    // MCAN Endian Register
@@ -49,13 +51,10 @@
 #define MCAN_HPMS(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0x94)    // MCAN High Priority Message Status
 #define MCAN_NDAT1(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0x98)    // MCAN New Data 1
 #define MCAN_NDAT2(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0x9C)    // MCAN New Data 2
-#define MCAN_RXF0C(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xA0)    // MCAN Rx FIFO 0 Configuration
-#define MCAN_RXF0S(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xA4)    // MCAN Rx FIFO 0 Status
-#define MCAN_RXF0A(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xA8)    // MCAN Rx FIFO 0 Acknowledge
+#define MCAN_RXFxC(mcan,fifo)    ATOMIC32(MCAN_BASE(mcan) + 0xA0 + (fifo * 0x10))    // MCAN Rx FIFO 0/1 Configuration
+#define MCAN_RXFxS(mcan,fifo)    ATOMIC32(MCAN_BASE(mcan) + 0xA4 + (fifo * 0x10))    // MCAN Rx FIFO 0/1 Status
+#define MCAN_RXFxA(mcan,fifo)    ATOMIC32(MCAN_BASE(mcan) + 0xA8 + (fifo * 0x10))    // MCAN Rx FIFO 0/1 Acknowledge
 #define MCAN_RXBC(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0xAC)    // MCAN Rx Buffer Configuration
-#define MCAN_RXF1C(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xB0)    // MCAN Rx FIFO 1 Configuration
-#define MCAN_RXF1S(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xB4)    // MCAN Rx FIFO 1 Status
-#define MCAN_RXF1A(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xB8)    // MCAN Rx FIFO 1 Acknowledge
 #define MCAN_RXESC(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xBC)    // MCAN Rx Buffer / FIFO Element Size Configuration
 #define MCAN_TXBC(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0xC0)    // MCAN Tx Buffer Configuration
 #define MCAN_TXFQS(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xC4)    // MCAN Tx FIFO / Queue Status
@@ -71,35 +70,35 @@
 #define MCAN_TXEFS(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xF4)    // MCAN Tx Event FIFO Status
 #define MCAN_TXEFA(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xF8)    // MCAN Tx Event FIFO Acknowledge
 
-#define MCANERR_REV(mcan)               ATOMIC32(MCAN_ERR_BASE(mcan) + 0x00)    // MCAN Error Aggregator Revision Register
-#define MCANERR_VECTOR(mcan)            ATOMIC32(MCAN_ERR_BASE(mcan) + 0x04)    // MCAN ECC Vector Register
-#define MCANERR_STAT(mcan)              ATOMIC32(MCAN_ERR_BASE(mcan) + 0x06)    // MCAN Error Misc Status
-#define MCANERR_WRAP_REV(mcan)          ATOMIC32(MCAN_ERR_BASE(mcan) + 0x08)    // MCAN ECC Wrapper Revision Register
-#define MCANERR_CTRL(mcan)              ATOMIC32(MCAN_ERR_BASE(mcan) + 0x0A)    // MCAN ECC Control
-#define MCANERR_CTRL1(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x0C)    // MCAN ECC Error Control 1 Register
-#define MCANERR_CTRL2(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x0E)    // MCAN ECC Error Control 2 Register
-#define MCANERR_STAT1(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x10)    // MCAN ECC Error Status 1 Register
-#define MCANERR_STAT2(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x12)    // MCAN ECC Error Status 2 Register
-#define MCANERR_STAT3(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x14)    // MCAN ECC Error Status 3 Register
-#define MCANERR_SEC_EOI(mcan)           ATOMIC32(MCAN_ERR_BASE(mcan) + 0x1E)    // MCAN Single Error Corrected End of Interrupt Register
-#define MCANERR_SEC_STATUS(mcan)        ATOMIC32(MCAN_ERR_BASE(mcan) + 0x20)    // MCAN Single Error Corrected Interrupt Status Register
-#define MCANERR_SEC_ENABLE_SET(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0x40)    // MCAN Single Error Corrected Interrupt Enable Set Register
-#define MCANERR_SEC_ENABLE_CLR(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0x60)    // MCAN Single Error Corrected Interrupt Enable Clear Register
-#define MCANERR_DED_EOI(mcan)           ATOMIC32(MCAN_ERR_BASE(mcan) + 0x9E)    // MCAN Double Error Detected End of Interrupt Register
-#define MCANERR_DED_STATUS(mcan)        ATOMIC32(MCAN_ERR_BASE(mcan) + 0xA0)    // MCAN Double Error Detected Interrupt Status Register
-#define MCANERR_DED_ENABLE_SET(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0xC0)    // MCAN Double Error Detected Interrupt Enable Set Register
-#define MCANERR_DED_ENABLE_CLR(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0xE0)    // MCAN Double Error Detected Interrupt Enable Clear Register
-#define MCANERR_AGGR_ENABLE_SET(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x00)    // MCAN Error Aggregator Enable Set Register
-#define MCANERR_AGGR_ENABLE_CLR(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x02)    // MCAN Error Aggregator Enable Clear Register
-#define MCANERR_AGGR_STATUS_SET(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x04)    // MCAN Error Aggregator Status Set Register
-#define MCANERR_AGGR_STATUS_CLR(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x06)    // MCAN Error Aggregator Status Clear Register
+#define MCANERR_REV(mcan)               ATOMIC32(MCAN_ERR_BASE(mcan) + 0x000)   // MCAN Error Aggregator Revision Register
+#define MCANERR_VECTOR(mcan)            ATOMIC32(MCAN_ERR_BASE(mcan) + 0x008)   // MCAN ECC Vector Register
+#define MCANERR_STAT(mcan)              ATOMIC32(MCAN_ERR_BASE(mcan) + 0x00C)   // MCAN Error Misc Status
+#define MCANERR_WRAP_REV(mcan)          ATOMIC32(MCAN_ERR_BASE(mcan) + 0x010)   // MCAN ECC Wrapper Revision Register
+#define MCANERR_CTRL(mcan)              ATOMIC32(MCAN_ERR_BASE(mcan) + 0x014)   // MCAN ECC Control
+#define MCANERR_CTRL1(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x018)   // MCAN ECC Error Control 1 Register
+#define MCANERR_CTRL2(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x01C)   // MCAN ECC Error Control 2 Register
+#define MCANERR_STAT1(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x020)   // MCAN ECC Error Status 1 Register
+#define MCANERR_STAT2(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x024)   // MCAN ECC Error Status 2 Register
+#define MCANERR_STAT3(mcan)             ATOMIC32(MCAN_ERR_BASE(mcan) + 0x028)   // MCAN ECC Error Status 3 Register
+#define MCANERR_SEC_EOI(mcan)           ATOMIC32(MCAN_ERR_BASE(mcan) + 0x03C)   // MCAN Single Error Corrected End of Interrupt Register
+#define MCANERR_SEC_STATUS(mcan)        ATOMIC32(MCAN_ERR_BASE(mcan) + 0x040)   // MCAN Single Error Corrected Interrupt Status Register
+#define MCANERR_SEC_ENABLE_SET(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0x080)   // MCAN Single Error Corrected Interrupt Enable Set Register
+#define MCANERR_SEC_ENABLE_CLR(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0x0C0)   // MCAN Single Error Corrected Interrupt Enable Clear Register
+#define MCANERR_DED_EOI(mcan)           ATOMIC32(MCAN_ERR_BASE(mcan) + 0x13C)   // MCAN Double Error Detected End of Interrupt Register
+#define MCANERR_DED_STATUS(mcan)        ATOMIC32(MCAN_ERR_BASE(mcan) + 0x140)   // MCAN Double Error Detected Interrupt Status Register
+#define MCANERR_DED_ENABLE_SET(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0x180)   // MCAN Double Error Detected Interrupt Enable Set Register
+#define MCANERR_DED_ENABLE_CLR(mcan)    ATOMIC32(MCAN_ERR_BASE(mcan) + 0x1C0)   // MCAN Double Error Detected Interrupt Enable Clear Register
+#define MCANERR_AGGR_ENABLE_SET(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x200)   // MCAN Error Aggregator Enable Set Register
+#define MCANERR_AGGR_ENABLE_CLR(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x204)   // MCAN Error Aggregator Enable Clear Register
+#define MCANERR_AGGR_STATUS_SET(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x208)   // MCAN Error Aggregator Status Set Register
+#define MCANERR_AGGR_STATUS_CLR(mcan)   ATOMIC32(MCAN_ERR_BASE(mcan) + 0x20C)   // MCAN Error Aggregator Status Clear Register
 
 
 
 #define MCANSS_M_STAT_MEM_INIT_DONE     ( 0x01U <<  1 )
 
 // MCANSS_CTRL
-#define MCANSS_M_CTRL_DBGSUSP       (1UL << 0)
+#define MCANSS_M_CTRL_DBGSUSP       (1UL << 3)
 #define MCANSS_M_CTRL_WAKEUPREQEN   (1UL << 4)
 #define MCANSS_M_CTRL_AUTOWAKEUP    (1UL << 5)
 
@@ -122,10 +121,10 @@
 #define MCAN_S_NBTP_NSJW(x)         ((uint32_t)(x) << 25)
 
 // MCAN_DBTP
-#define MCAN_S_DBTP_DTSEG2(x)       ((uint32_t)(x) <<  0U)
+#define MCAN_S_DBTP_DTSEG2(x)       ((uint32_t)(x) <<  4U)
 #define MCAN_S_DBTP_DTSEG1(x)       ((uint32_t)(x) <<  8U)
 #define MCAN_S_DBTP_DBRP(x)         ((uint32_t)(x) << 16U)
-#define MCAN_S_DBTP_DSJW(x)         ((uint32_t)(x) << 20U)
+#define MCAN_S_DBTP_DSJW(x)         ((uint32_t)(x) <<  0U)
 
 #define MCAN_M_DBTP_DSJW_TDC        (1UL << 23)
 
@@ -169,21 +168,19 @@
 #define MCAN_M_RXESC_RBDS           MCAN_S_RXESC_RBDS(MASK(3))
 
 // MCAN_RXF0C / MCAN_RXF1C
-#define MCAN_S_RXF0C_F0S(x)         ((uint32_t)(x) << 16U)
-#define MCAN_S_RXF1C_F1S(x)         ((uint32_t)(x) << 16U)
+#define MCAN_S_RXFxC_FxS(x)         ((uint32_t)(x) << 16U)
 
-#define MCAN_M_RXF0C_F0S            MCAN_S_RXF0C_F0S(MASK(7))
-#define MCAN_M_RXF1C_F1S            MCAN_S_RXF1C_F1S(MASK(7))
+#define MCAN_M_RXFxC_FxS            MCAN_S_RXFxC_FxS(MASK(7))
 
 // MCAN_RXF0S / MCAN_RXF1S
-#define MCAN_M_RXF0S_F0FL           MCAN_S_RXF0S_F0FL(MASK(7))
-#define MCAN_M_RXF0S_F0GI           MCAN_S_RXF0S_F0GI(MASK(6))
-#define MCAN_M_RXF1S_F1FL           MCAN_S_RXF1S_F1FL(MASK(7))
-#define MCAN_M_RXF1S_F1GI           MCAN_S_RXF1S_F1GI(MASK(6))
+#define MCAN_S_RXFxS_FxFL(x)        ((uint32_t)(x) << 0U)
+#define MCAN_S_RXFxS_FxGI(x)        ((uint32_t)(x) << 8U)
+
+#define MCAN_M_RXFxS_FxFL           MCAN_S_RXFxS_FxFL(MASK(7))
+#define MCAN_M_RXFxS_FxGI           MCAN_S_RXFxS_FxGI(MASK(6))
 
 // MCAN_RXF0A / MCAN_RXF1A
-#define MCAN_S_RXF0A_F0AI(x)        ((uint32_t)(x) << 0U)
-#define MCAN_S_RXF1A_F1AI(x)        ((uint32_t)(x) << 0U)
+#define MCAN_S_RXFxA_FxAI(x)        ((uint32_t)(x) << 0U)
 
 // MCAN_TXBC
 #define MCAN_S_TXBC_TBSA(x)         ((uint32_t)(x) << 2U)

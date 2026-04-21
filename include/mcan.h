@@ -2,8 +2,8 @@
 #define MCAN_H_
 
 // Change this to modify data exchange buffer size
-// For CAN-FD, chaning this value is strongly recommended to be consistent with the data length configured in MCAN_SetupTx and MCAN_SetupRx
-#define MCAN_MAX_DATA_BYTES     (8)
+// 64 bytes is the maximum data payload for CAN FD frames. Adjust as needed for smaller classic CAN frames to save memory, but should not exceed 64 bytes.
+#define MCAN_MAX_DATA_BYTES     (64)
 
 #include "base.h"
 #include "support_mcan.h"
@@ -39,7 +39,7 @@ enum MCAN_Mode
     MCAN_Mode_Classic   = 0b00U,
     MCAN_Mode_CANFD     = 0b10U,
     MCAN_Mode_CANFD_BRS = 0b11U,
-    MCAN_Mode_Unspecified = 0b01U   // Not a valid value for module configuration. Only for send functions. Driver decides message mode based on module configuration.
+    MCAN_Mode_Unspecified = 0b01U   // Not a valid value for module configuration. Only for send functions: Driver decides message mode based on module configuration.
 };
 
 enum MCAN_BitClkSrc
@@ -90,9 +90,9 @@ enum MCAN_TxQueueMode
 
 enum MCAN_Rx
 {
-    MCAN_Rx_FIFO0,
-    MCAN_Rx_FIFO1,
-    MCAN_Rx_Buffer
+    MCAN_Rx_FIFO0 = 0,
+    MCAN_Rx_FIFO1 = 1,
+    MCAN_Rx_Buffer = 2
 };
 
 
