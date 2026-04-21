@@ -19,6 +19,12 @@ static void MCAN_ResetMessageRAM(enum MCAN mcan);
 
 struct MCAN_Status MCAN_status[MCAN_COUNT];
 
+/**
+ * @brief Select the source clock for an MCAN module bit timing engine.
+ *
+ * @param mcan Target MCAN instance.
+ * @param src Bit clock source selection.
+ */
 void MCAN_SelectBitClkSrc(enum MCAN mcan, enum MCAN_BitClkSrc src)
 {
     CLK_SetCLKSRCCTL2(10+2*mcan, src);
@@ -352,6 +358,11 @@ static void MCAN_SelfTest(enum MCAN mcan)
 }
 
 
+/**
+ * @brief Reset Message RAM allocation and clear all TX/RX/filter section setup.
+ *
+ * @param mcan Target MCAN instance.
+ */
 static void MCAN_ResetMessageRAM(enum MCAN mcan)
 {
     MCAN_status[mcan].msgRam.allocated = 0;
@@ -363,6 +374,19 @@ static void MCAN_ResetMessageRAM(enum MCAN mcan)
     MCAN_SetupFilter(mcan, MCAN_ID_Extended, MCAN_FilterNonMatch_Discard, false);
 }
 
+/**
+ * @brief Configure an MCAN module for CAN-FD operation.
+ *
+ * The function initializes MCAN, configures arbitration timing, optionally
+ * enables bit-rate switching (BRS) when arbitration and data bitrates differ,
+ * then runs internal loopback self-test.
+ *
+ * @param mcan Target MCAN instance.
+ * @param fclkMHz MCAN functional clock in MHz.
+ * @param arbiPrescale Arbitration clock prescaler.
+ * @param arbiKbps Arbitration phase bitrate in kbps.
+ * @param dataKbps Data phase bitrate in kbps.
+ */
 void MCAN_SetupCANFD(enum MCAN mcan, float fclkMHz, uint16_t arbiPrescale, float arbiKbps, float dataKbps)
 {
     MCAN_SetFCLK(mcan, fclkMHz);
@@ -410,6 +434,14 @@ void MCAN_SetupCANFD(enum MCAN mcan, float fclkMHz, uint16_t arbiPrescale, float
 
 }
 
+/**
+ * @brief Configure an MCAN module for Classical CAN operation.
+ *
+ * @param mcan Target MCAN instance.
+ * @param fclkMHz MCAN functional clock in MHz.
+ * @param arbiPrescale Arbitration clock prescaler.
+ * @param bitrateKbps Classical CAN bitrate in kbps.
+ */
 void MCAN_SetupClassic(enum MCAN mcan, float fclkMHz, uint16_t arbiPrescale, float bitrateKbps)
 {
     MCAN_SetFCLK(mcan, fclkMHz);
@@ -423,6 +455,14 @@ void MCAN_SetupClassic(enum MCAN mcan, float fclkMHz, uint16_t arbiPrescale, flo
     MCAN_SelfTest(mcan);
 }
 
+/**
+ * @brief Start normal MCAN operation.
+ *
+ * Leaves initialization mode so the configured MCAN module can participate
+ * on the bus.
+ *
+ * @param mcan Target MCAN instance.
+ */
 void MCAN_Start(enum MCAN mcan)
 {
     MCAN_ExitInitMode(mcan);
@@ -430,6 +470,15 @@ void MCAN_Start(enum MCAN mcan)
 
 
 
+/**
+ * @brief Configure TX message RAM section and queue mode.
+ *
+ * @param mcan Target MCAN instance.
+ * @param mode TX FIFO or queue arbitration mode.
+ * @param dataSize Element payload capacity for TX objects.
+ * @param dBufferDepth Number of dedicated TX buffers.
+ * @param queueDepth Number of TX queue/FIFO elements.
+ */
 void MCAN_SetupTx(enum MCAN mcan, enum MCAN_TxQueueMode mode, enum MCAN_DataSize dataSize, uint16_t dBufferDepth, uint16_t queueDepth)
 {
     int16_t startAddr;
@@ -470,6 +519,14 @@ void MCAN_SetupTx(enum MCAN mcan, enum MCAN_TxQueueMode mode, enum MCAN_DataSize
 // }
 
 
+/**
+ * @brief Configure RX buffer/FIFO message RAM section.
+ *
+ * @param mcan Target MCAN instance.
+ * @param rx RX destination section to configure.
+ * @param dataSize Element payload capacity for RX objects.
+ * @param depth Number of elements in the selected section.
+ */
 void MCAN_SetupRx(enum MCAN mcan, enum MCAN_Rx rx, enum MCAN_DataSize dataSize, uint16_t depth)
 {
     int16_t startAddr;
@@ -538,6 +595,17 @@ void MCAN_SetupRx(enum MCAN mcan, enum MCAN_Rx rx, enum MCAN_DataSize dataSize, 
 // }
 
 
+/**
+ * @brief Initialize standard or extended filter table base configuration.
+ *
+ * This sets filter table base address/count and global behavior for non-match
+ * and remote frames.
+ *
+ * @param mcan Target MCAN instance.
+ * @param filter Filter table type (standard or extended).
+ * @param nonMatchDest Destination for frames not matching any filter.
+ * @param rejectRemote Whether remote frames are rejected.
+ */
 void MCAN_SetupFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterNonMatch nonMatchDest, bool rejectRemote)
 {
     int16_t startAddr;
@@ -574,6 +642,16 @@ void MCAN_SetupFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterNonMa
     }
 }
 
+/**
+ * @brief Append one filter entry to the selected filter table.
+ *
+ * @param mcan Target MCAN instance.
+ * @param filter Filter table type (standard or extended).
+ * @param type Filter matching mode.
+ * @param dest Filter destination/action.
+ * @param id1 First ID field, meaning depends on filter type.
+ * @param id2 Second ID field, meaning depends on filter type.
+ */
 void MCAN_AddFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterType type, enum MCAN_FilterDest dest, uint32_t id1, uint32_t id2)
 {
     uint16_t existingCount, filterLimit;
@@ -627,6 +705,14 @@ void MCAN_AddFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterType ty
 
 
 // bool MCAN_SendBuffer(enum MCAN mcan, uint16_t index, struct MCAN_Message *message);
+/**
+ * @brief Push one message to TX queue/FIFO and request transmission.
+ *
+ * @param mcan Target MCAN instance.
+ * @param message Message to transmit.
+ * @return true Message accepted for transmission.
+ * @return false TX queue/FIFO is full.
+ */
 bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message)
 {
     bool txFull;
@@ -696,6 +782,14 @@ bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message)
 
 }
 
+/**
+ * @brief Check whether the selected RX FIFO currently contains any messages.
+ *
+ * @param mcan Target MCAN instance.
+ * @param rx RX FIFO selector.
+ * @return true Selected FIFO is empty.
+ * @return false Selected FIFO has at least one pending message.
+ */
 static bool MCAN_IsRxFIFOEmpty(enum MCAN mcan, enum MCAN_Rx rx)
 {
     switch (rx)
@@ -711,6 +805,13 @@ static bool MCAN_IsRxFIFOEmpty(enum MCAN mcan, enum MCAN_Rx rx)
     }
 }
 
+/**
+ * @brief Read and acknowledge one message from RX FIFO0 or RX FIFO1.
+ *
+ * @param mcan Target MCAN instance.
+ * @param rx RX FIFO selector.
+ * @param message Output message structure.
+ */
 void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *message)
 {
     uint16_t dataLengthByte;
@@ -787,6 +888,13 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
     }
 }
 
+/**
+ * @brief Read one message from a dedicated RX buffer.
+ *
+ * @param mcan Target MCAN instance.
+ * @param bufferNum RX buffer index.
+ * @param message Output message structure.
+ */
 void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *message)
 {
     uint16_t dataLengthByte;
@@ -841,6 +949,13 @@ void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *
 }
 
 
+/**
+ * @brief Configure legacy compatibility mode defaults.
+ *
+ * Sets classical CAN timing and default FIFO depths used by legacy wrappers.
+ *
+ * @param mcan Target MCAN instance.
+ */
 void MCAN_Legacy_Setup(enum MCAN mcan)
 {
     MCAN_SetupClassic(mcan, 10, 4, 125);
@@ -849,6 +964,15 @@ void MCAN_Legacy_Setup(enum MCAN mcan)
    MCAN_SetupRx(mcan, MCAN_Rx_FIFO0, MCAN_DataSize_8Byte, 64);
 }
 
+/**
+ * @brief Configure legacy standard-ID acceptance filter behavior.
+ *
+ * @param mcan Target MCAN instance.
+ * @param address Standard ID to accept.
+ * @param dontCares Unused legacy parameter.
+ * @param simultaneousMsgs Nonzero enables a dedicated filter, zero resets
+ *                         to default behavior.
+ */
 void MCAN_Legacy_AddFilter(enum MCAN mcan, uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs)
 {
     if(!simultaneousMsgs)
@@ -864,6 +988,14 @@ void MCAN_Legacy_AddFilter(enum MCAN mcan, uint16_t address, uint16_t dontCares,
 }
 
 // Sending wrapper to support existing CANO implementation
+/**
+ * @brief Send one legacy CAN message using the MCAN queue API.
+ *
+ * @param mcan Target MCAN instance.
+ * @param msg Legacy message container.
+ * @return true Message accepted for transmission.
+ * @return false TX queue/FIFO is full.
+ */
 bool MCAN_Legacy_Send(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
 {
     // Convert legacy message format to new format
@@ -881,6 +1013,15 @@ bool MCAN_Legacy_Send(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
     
     return MCAN_SendQueue(mcan, &message);
 }
+
+/**
+ * @brief Receive one legacy CAN message from RX FIFO0.
+ *
+ * @param mcan Target MCAN instance.
+ * @param msg Output legacy message container.
+ * @return true One message was read and unpacked.
+ * @return false No message available.
+ */
 bool MCAN_Legacy_Receive(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
 {
     struct MCAN_Message message = {0};
