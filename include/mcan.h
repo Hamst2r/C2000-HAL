@@ -2,6 +2,7 @@
 #define MCAN_H_
 
 // Change this to modify data exchange buffer size
+// For CAN-FD, chaning this value is strongly recommended to be consistent with the data length configured in MCAN_SetupTx and MCAN_SetupRx
 #define MCAN_MAX_DATA_BYTES     (8)
 
 #include "base.h"
@@ -9,8 +10,8 @@
 
 enum MCAN_ID
 {
-    MCAN_ID_Standard,
-    MCAN_ID_Extended
+    MCAN_ID_Standard = 0,
+    MCAN_ID_Extended = 1
 };
 
 enum MCAN_DataLength
@@ -37,7 +38,8 @@ enum MCAN_Mode
 {
     MCAN_Mode_Classic   = 0b00U,
     MCAN_Mode_CANFD     = 0b10U,
-    MCAN_Mode_CANFD_BRS = 0b11U
+    MCAN_Mode_CANFD_BRS = 0b11U,
+    MCAN_Mode_Unspecified = 0b01U   // Not a valid value for module configuration. Only for send functions. Driver decides message mode based on module configuration.
 };
 
 enum MCAN_BitClkSrc

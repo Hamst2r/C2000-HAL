@@ -1,6 +1,7 @@
 #include "mcan.h"
 #include "base.h"
 #include "clk.h"
+#include "timer.h"
 #include <math.h>
 
 
@@ -33,14 +34,18 @@ static void MCAN_SetFCLK(enum MCAN mcan, float fclkMHz)
     if(fclkMHz > CLK_status.sysClkPhysicalMHz)
     {
         // FCLK cannot be faster that SYSCLK (physical). Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)fclkMHz, (uint32_t)CLK_status.sysClkPhysicalMHz);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)fclkMHz, (uint32_t)CLK_status.sysClkPhysicalMHz);
+        ESTOP0;
+        while(1);
     }
     fclkDiv = roundf(CLK_status.pllOutMHz / fclkMHz);
     
     if(fclkDiv > 20)
     {
         // FCLKDIV cannot be larger than 20. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)fclkDiv, 20U);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)fclkDiv, 20U);
+        ESTOP0;
+        while(1);
     }
 
     // Bit field shift amount in AUXCLKDIV register
@@ -85,6 +90,110 @@ static void MCAN_Init(enum MCAN mcan)
     MCAN_CCCR(mcan) = 0x0000U | MCAN_M_CCCR_INIT | MCAN_M_CCCR_CCE;
 }
 
+static inline uint16_t MCAN_GetElementSizeByte(enum MCAN_DataSize dataSize)
+{
+    switch (dataSize)
+    {
+        case MCAN_DataSize_8Byte:
+            return  8 + 8; //  8 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_12Byte:
+            return 12 + 8; // 12 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_16Byte:
+            return 16 + 8; // 16 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_20Byte:
+            return 20 + 8; // 20 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_24Byte:
+            return 24 + 8; // 24 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_32Byte:
+            return 32 + 8; // 32 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_48Byte:
+            return 48 + 8; // 48 bytes for data, 8 bytes for metadata
+        case MCAN_DataSize_64Byte:
+            return 64 + 8; // 64 bytes for data, 8 bytes for metadata
+    }
+}
+
+static inline uint16_t MCAN_GetDataLengthByte(enum MCAN_DataLength length)
+{
+    switch(length)
+    {
+        case MCAN_DataLength_0Byte:
+        case MCAN_DataLength_1Byte:
+        case MCAN_DataLength_2Byte:
+        case MCAN_DataLength_3Byte:
+        case MCAN_DataLength_4Byte:
+        case MCAN_DataLength_5Byte:
+        case MCAN_DataLength_6Byte:
+        case MCAN_DataLength_7Byte:
+        case MCAN_DataLength_8Byte:
+            return length;
+
+        case MCAN_DataLength_12Byte:
+            return 12;
+
+        case MCAN_DataLength_16Byte:
+            return 16;
+
+        case MCAN_DataLength_20Byte:
+            return 20;
+
+        case MCAN_DataLength_24Byte:
+            return 24;
+
+        case MCAN_DataLength_32Byte:
+            return 32;
+
+        case MCAN_DataLength_48Byte:
+            return 48;
+
+        case MCAN_DataLength_64Byte:
+            return 64;
+    }
+
+    return 0;
+}
+
+static void MCAN_PackBytes(uint32_t* dest, const uint16_t* src, uint16_t lengthByte)
+{
+    for(uint16_t i=0; i<lengthByte; i+=4)
+    {
+        dest[i/4] = (uint32_t)src[i]
+                  | ((uint32_t)src[i+1] << 8)
+                  | ((uint32_t)src[i+2] << 16)
+                  | ((uint32_t)src[i+3] << 24);
+    }
+}
+
+static void MCAN_UnpackBytes(uint16_t* dest, const uint32_t* src, uint16_t lengthByte)
+{
+    for(uint16_t i=0; i<lengthByte; i+=4)
+    {
+        dest[i]   = src[i/4]       & 0xFF;
+        dest[i+1] = src[i/4] >>  8 & 0xFF;
+        dest[i+2] = src[i/4] >> 16 & 0xFF;
+        dest[i+3] = src[i/4] >> 24;
+    }
+}
+
+
+static int16_t MCAN_AllocateMsgRam(enum MCAN mcan, uint16_t sizeByte)
+{
+    uint16_t sectionOffset;
+
+    uint16_t sizeByteAligned = (sizeByte + 3) & ~0x3; // Align to 4 bytes since smallest addressable unit in Message RAM is 4 bytes
+
+    if((MCAN_status[mcan].msgRam.allocated + sizeByteAligned) > MCAN_MSG_RAM_DEPTH_BYTE)
+    {
+        // Message RAM size exceed. Return -1 to indicate error
+        return -1;
+    }
+
+    sectionOffset = MCAN_status[mcan].msgRam.allocated;
+    MCAN_status[mcan].msgRam.allocated += sizeByteAligned;
+
+    return sectionOffset;
+}
+
 static void MCAN_SetArbiTiming(enum MCAN mcan, uint16_t arbiPrescale, float arbiKbps)
 {
     float arbiClkKHz;
@@ -94,7 +203,9 @@ static void MCAN_SetArbiTiming(enum MCAN mcan, uint16_t arbiPrescale, float arbi
     if(arbiKbps > 1000)
     {
         // Arbitration phase bit rate cannot exceed 1Mbps. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)arbiKbps, 1000U);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)arbiKbps, 1000U);
+        ESTOP0;
+        while(1);
     }
 
     arbiClkKHz = MCAN_status[mcan].fclkMHz * 1000 / arbiPrescale;
@@ -103,11 +214,14 @@ static void MCAN_SetArbiTiming(enum MCAN mcan, uint16_t arbiPrescale, float arbi
     if((arbiQuanta < 5) || (arbiQuanta > 280))
     {
         // Number of time quanta is outside permissable range, consider adjusting prescale ratio. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)arbiQuanta, (uint32_t)arbiPrescale);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)arbiQuanta, (uint32_t)arbiPrescale);
+        ESTOP0;
+        while(1);
     }
 
     // Calculate TSEG2 length for achieving target Sample Point position
-    tseg2 = roundf(arbiQuanta * (1-MCAN_SAMPLE_POINT_TARGET));
+    // Subtracting 1 from arbiQuanta to account for Sync Segment which is always 1 TQ
+    tseg2 = roundf(arbiQuanta * (1-MCAN_SAMPLE_POINT_TARGET)) - 1;
     tseg1 = arbiQuanta - 1 - tseg2;
     sjw = (tseg2 > 4) ? 4 : tseg2;  // SJW cannot be larger than 4
 
@@ -126,7 +240,9 @@ static void MCAN_SetDataTiming(enum MCAN mcan, float dataKbps)
     if(dataKbps > 5000)
     {
         // Data phase bit rate cannot exceed 5Mbps. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataKbps, 5000U);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataKbps, 5000U);
+        ESTOP0;
+        while(1);
     }
 
     // In this library, data bit rate prescale is not used
@@ -135,13 +251,16 @@ static void MCAN_SetDataTiming(enum MCAN mcan, float dataKbps)
     if((dataQuanta < 5) || (dataQuanta > 40))
     {
         // Number of time quanta is outside permissable range. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataQuanta, 40U);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataQuanta, 40U);
+        ESTOP0;
+        while(1);
     }
 
-    // Calculate TSEG2 length for achieving target Sample Point position
-    tseg2 = roundf(dataQuanta * (1-MCAN_SAMPLE_POINT_TARGET));
+    // Calculate TSEG2 length for achieving target Sample Point position. 
+    // Subtracting 1 from dataQuanta to account for Sync Segment which is always 1 TQ
+    tseg2 = roundf(dataQuanta * (1-MCAN_SAMPLE_POINT_TARGET)) - 1;
     tseg1 = dataQuanta - 1 - tseg2;
-    sjw = tseg2;
+    sjw = (tseg2 > 4) ? 4 : tseg2;  // SJW is equal to or less than TSEG2, and cannot be larger than 4
 
     // Write timing information and enable Transmitter Delay Compensation (TDC)
     // Value written to register in 1 less than the desired value (eg. writing 4 means 5)
@@ -161,7 +280,9 @@ static void MCAN_SelfTest(enum MCAN mcan)
     struct MCAN_Message rxMessage = {0};
     uint32_t savedCCCR;
     uint32_t savedTEST;
-    uint16_t timeout;
+    uint32_t arbiTxTimeUs;
+    uint32_t dataTxTimeUs;
+    int32_t timeout;
 
     savedCCCR = MCAN_CCCR(mcan);
     savedTEST = MCAN_TEST(mcan);
@@ -179,6 +300,7 @@ static void MCAN_SelfTest(enum MCAN mcan)
     txMessage.data[0] = MCAN_SELFTEST_DATA_WORD0;
     txMessage.data[1] = MCAN_SELFTEST_DATA_WORD1;
 
+    // Enable loopback mode and test mode for self-test. Enter Bus monitoring mode to avoid affecting other nodes on the bus during self-test
     MCAN_CCCR(mcan) |= MCAN_M_CCCR_MON | MCAN_M_CCCR_TEST;
     MCAN_TEST(mcan) = MCAN_S_TEST_TX(3U) | MCAN_M_TEST_LBCK;
 
@@ -186,18 +308,25 @@ static void MCAN_SelfTest(enum MCAN mcan)
 
     if(!MCAN_SendQueue(mcan, &txMessage))
     {
-        HAL_FATAL(HAL_ErrorCode_HardwareFault, (uint32_t)mcan, 1U);
+        // HAL_FATAL(HAL_ErrorCode_HardwareFault, (uint32_t)mcan, 1U);
+        ESTOP0;
+        while(1);
     }
 
-    timeout = MCAN_SELFTEST_TIMEOUT;
-    while(MCAN_IsRxFIFOEmpty(mcan, MCAN_Rx_FIFO0) && timeout)
-    {
-        timeout--;
-    }
+    arbiTxTimeUs = 32.0 / (MCAN_status[mcan].arbiKbps/1000.0) + 10;// Add 10us margin for processing delay
+    dataTxTimeUs = 64.0 / (MCAN_status[mcan].mode == MCAN_Mode_CANFD_BRS ? MCAN_status[mcan].dataKbps : MCAN_status[mcan].arbiKbps) * 1000;
 
-    if(timeout == 0U)
+    // timeout for waiting for message to be received. Set to 3 times of the expected transmission time to account for processing delay and scheduling delay in non-RTOS environment
+    timeout = TIMER_GetExpiryTime(3*roundf((arbiTxTimeUs + dataTxTimeUs)));
+
+    while(MCAN_IsRxFIFOEmpty(mcan, MCAN_Rx_FIFO0))
     {
-        HAL_FATAL(HAL_ErrorCode_Timeout, (uint32_t)mcan, 2U);
+        if (TIMER_HasExpired(timeout)) {
+            // Do not receive message within expected timeframe, self-test failed
+            // HAL_FATAL(HAL_ErrorCode_Timeout, (uint32_t)mcan, 2U);
+            ESTOP0;
+            while(1);
+        }
     }
 
     MCAN_ReadRxFIFO(mcan, MCAN_Rx_FIFO0, &rxMessage);
@@ -208,7 +337,10 @@ static void MCAN_SelfTest(enum MCAN mcan)
     || (rxMessage.data[0] != txMessage.data[0])
     || (rxMessage.data[1] != txMessage.data[1]))
     {
-        HAL_FATAL(HAL_ErrorCode_HardwareFault, (uint32_t)mcan, 3U);
+        // Received message does not match transmitted message, self-test failed
+        // HAL_FATAL(HAL_ErrorCode_HardwareFault, (uint32_t)mcan, 3U);
+        ESTOP0;
+        while(1);
     }
 
     MCAN_EnterInitMode(mcan);
@@ -296,107 +428,7 @@ void MCAN_Start(enum MCAN mcan)
     MCAN_ExitInitMode(mcan);
 }
 
-static inline uint16_t MCAN_GetElementSizeByte(enum MCAN_DataSize dataSize)
-{
-    switch (dataSize)
-    {
-        case MCAN_DataSize_8Byte:
-            return  8 + 8; //  8 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_12Byte:
-            return 12 + 8; // 12 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_16Byte:
-            return 16 + 8; // 16 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_20Byte:
-            return 20 + 8; // 20 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_24Byte:
-            return 24 + 8; // 24 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_32Byte:
-            return 32 + 8; // 32 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_48Byte:
-            return 48 + 8; // 48 bytes for data, 8 bytes for metadata
-        case MCAN_DataSize_64Byte:
-            return 64 + 8; // 64 bytes for data, 8 bytes for metadata
-    }
-}
 
-static inline uint16_t MCAN_GetDataLengthByte(enum MCAN_DataLength length)
-{
-    switch(length)
-    {
-        case MCAN_DataLength_0Byte:
-        case MCAN_DataLength_1Byte:
-        case MCAN_DataLength_2Byte:
-        case MCAN_DataLength_3Byte:
-        case MCAN_DataLength_4Byte:
-        case MCAN_DataLength_5Byte:
-        case MCAN_DataLength_6Byte:
-        case MCAN_DataLength_7Byte:
-        case MCAN_DataLength_8Byte:
-            return length;
-
-        case MCAN_DataLength_12Byte:
-            return 12;
-
-        case MCAN_DataLength_16Byte:
-            return 16;
-
-        case MCAN_DataLength_20Byte:
-            return 20;
-
-        case MCAN_DataLength_24Byte:
-            return 24;
-
-        case MCAN_DataLength_32Byte:
-            return 32;
-
-        case MCAN_DataLength_48Byte:
-            return 48;
-
-        case MCAN_DataLength_64Byte:
-            return 64;
-    }
-
-    return 0;
-}
-
-static void MCAN_PackBytes(uint32_t* dest, const uint16_t* src, uint16_t lengthByte)
-{
-    for(uint16_t i=0; i<lengthByte; i+=4)
-    {
-        dest[i/4] = (uint32_t)src[i]
-                  | ((uint32_t)src[i+1] << 8)
-                  | ((uint32_t)src[i+2] << 16)
-                  | ((uint32_t)src[i+3] << 24);
-    }
-}
-
-static void MCAN_UnpackBytes(uint16_t* dest, const uint32_t* src, uint16_t lengthByte)
-{
-    for(uint16_t i=0; i<lengthByte; i+=4)
-    {
-        dest[i] = src[i/4] & 0xFF;
-        dest[i+1] = src[i/4] >> 8 & 0xFF;
-        dest[i+2] = src[i/4] >> 16 & 0xFF;
-        dest[i+3] = src[i/4] >> 24;
-    }
-}
-
-
-static int16_t MCAN_AllocateMsgRam(enum MCAN mcan, uint16_t sizeByte)
-{
-    uint16_t sectionAddr;
-
-    if((MCAN_status[mcan].msgRam.allocated + sizeByte) > MCAN_MSG_RAM_DEPTH_BYTE)
-    {
-        // Message RAM size exceed. Return -1 to indicate error
-        return -1;
-    }
-
-    sectionAddr = MCAN_status[mcan].msgRam.allocated;
-    MCAN_status[mcan].msgRam.allocated += sizeByte;
-
-    return sectionAddr;
-}
 
 void MCAN_SetupTx(enum MCAN mcan, enum MCAN_TxQueueMode mode, enum MCAN_DataSize dataSize, uint16_t dBufferDepth, uint16_t queueDepth)
 {
@@ -404,7 +436,9 @@ void MCAN_SetupTx(enum MCAN mcan, enum MCAN_TxQueueMode mode, enum MCAN_DataSize
     if((dBufferDepth + queueDepth) > 32)
     {
         // Sum of dedicated Tx Buffer and Tx Queue cannot exceed 32. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)dBufferDepth, (uint32_t)queueDepth);
+        // HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)dBufferDepth, (uint32_t)queueDepth);
+        ESTOP0;
+        while(1);
     }
 
 
@@ -414,7 +448,9 @@ void MCAN_SetupTx(enum MCAN mcan, enum MCAN_TxQueueMode mode, enum MCAN_DataSize
     if(startAddr == -1)
     {
         // Unable to allocate Message RAM for TX Buffer. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)dataSize, (uint32_t)(dBufferDepth + queueDepth));
+        // HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)dataSize, (uint32_t)(dBufferDepth + queueDepth));
+        ESTOP0;
+        while(1);
     }
 
     MCAN_status[mcan].msgRam.startAddr.txBuffer = startAddr;
@@ -441,7 +477,10 @@ void MCAN_SetupRx(enum MCAN mcan, enum MCAN_Rx rx, enum MCAN_DataSize dataSize, 
     if (depth > 64) 
     {
         // Each RX Section is limited to 64 elements. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)depth, 64U);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)depth, 64U);
+        ESTOP0;
+        while(1);
+
     }
 
     startAddr = MCAN_AllocateMsgRam(mcan, MCAN_GetElementSizeByte(dataSize) * depth);
@@ -449,7 +488,9 @@ void MCAN_SetupRx(enum MCAN mcan, enum MCAN_Rx rx, enum MCAN_DataSize dataSize, 
     if(startAddr == -1)
     {
         // Unable to allocate Message RAM. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)rx, (uint32_t)depth);
+        // HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)rx, (uint32_t)depth);
+        ESTOP0;
+        while(1);
     }
 
     switch (rx) 
@@ -506,7 +547,9 @@ void MCAN_SetupFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterNonMa
     if(startAddr == -1)
     {
         // Unable to allocate Message RAM. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)filter, 0U);
+        // HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)filter, 0U);
+        ESTOP0;
+        while(1);
     }
 
     if(filter == MCAN_ID_Standard)
@@ -552,14 +595,18 @@ void MCAN_AddFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterType ty
     if(existingCount >= filterLimit)
     {
         // Maximum filter count reached. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)existingCount, (uint32_t)filterLimit);
+        // HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)existingCount, (uint32_t)filterLimit);
+        ESTOP0;
+        while(1);
     }
 
     filterAddr = MCAN_AllocateMsgRam(mcan, filterSizeByte);
     if(filterAddr == -1)
     {
         // Unable to allocate Message RAM. Stop initialization
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)filter, (uint32_t)filterSizeByte);
+        // HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)filter, (uint32_t)filterSizeByte);
+        ESTOP0;
+        while(1);
     }
     
     filterAddr += MCAN_MSG_RAM_BASE(mcan);
@@ -583,6 +630,7 @@ void MCAN_AddFilter(enum MCAN mcan, enum MCAN_ID filter, enum MCAN_FilterType ty
 bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message)
 {
     bool txFull;
+    enum MCAN_Mode mode;
     uint16_t dataLengthByte;
     uint16_t dataLengthWord;
     uint16_t putIndex;
@@ -608,7 +656,9 @@ bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message)
 
     if(dataLengthByte > MCAN_MAX_DATA_BYTES)
     {
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
+        ESTOP0;
+        while(1);
     }
 
     if(message->idType == MCAN_ID_Standard && (message->id & 0x7FF) !=0)
@@ -621,6 +671,13 @@ bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message)
        | message->idType   << 30
        | message->isRemote << 29
        | messageID;
+
+    if(message->mode == MCAN_Mode_Unspecified || message->mode > MCAN_status[mcan].mode)
+    {
+        mode = MCAN_status[mcan].mode;
+    } else {
+        mode = message->mode;
+    }
 
     t1 = message->mode   << 20
        | message->length << 16;
@@ -685,7 +742,9 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
         
         default:
             // Invalid RX type. Stop execution
-            HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)rx, 0U);
+            // HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)rx, 0U);
+            ESTOP0;
+            while(1);
     }
 
     t0 = ATOMIC32(elementAddr);
@@ -696,9 +755,9 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
 
     if(message->idType == MCAN_ID_Standard)
     {
-        messageID = (t0 >> 18) & 0x7FF;
+        messageID = (t0 >> 18) & MASK(11);
     } else {
-        messageID = t0 & 0x3FFFFFFF;
+        messageID = t0 & MASK(29);
     }
     
     message->id     = messageID;
@@ -710,7 +769,9 @@ void MCAN_ReadRxFIFO(enum MCAN mcan, enum MCAN_Rx rx, struct MCAN_Message *messa
     dataLengthWord = (dataLengthByte + 3U) >> 2;
     if(dataLengthByte > MCAN_MAX_DATA_BYTES)
     {
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
+        ESTOP0;
+        while(1);
     }
 
     for(uint16_t i=0; i<dataLengthWord; i++)
@@ -737,7 +798,9 @@ void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *
     if(bufferNum >= MCAN_status[mcan].msgRam.nElement.rxBuffer)
     {
         // Invalid buffer number. Stop execution
-        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)bufferNum, MCAN_status[mcan].msgRam.nElement.rxBuffer);
+        // HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)bufferNum, MCAN_status[mcan].msgRam.nElement.rxBuffer);
+        ESTOP0;
+        while(1);
     }
 
     elementAddr = MCAN_MSG_RAM_BASE(mcan)
@@ -752,9 +815,9 @@ void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *
 
     if(message->idType == MCAN_ID_Standard)
     {
-        messageID = (t0 >> 18) & 0x7FF;
+        messageID = (t0 >> 18) & MASK(11);
     } else {
-        messageID = t0 & 0x3FFFFFFF;
+        messageID = t0 & MASK(29);
     }
     
     message->id     = messageID;
@@ -766,7 +829,9 @@ void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *
     dataLengthWord = (dataLengthByte + 3U) >> 2;
     if(dataLengthByte > MCAN_MAX_DATA_BYTES)
     {
-        HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
+        // HAL_FATAL(HAL_ErrorCode_OutOfRange, (uint32_t)dataLengthByte, MCAN_MAX_DATA_BYTES);
+        ESTOP0;
+        while(1);
     }
 
     for(uint16_t i=0; i<dataLengthWord; i++)
@@ -808,7 +873,7 @@ bool MCAN_Legacy_Send(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
         .mode     = MCAN_Mode_Classic,
         .idType   = MCAN_ID_Standard,
         .id       = msg->address,
-        .length   = msg->length,
+        .length   = (enum MCAN_DataLength)msg->length,
         .data     = {0}
     };
 

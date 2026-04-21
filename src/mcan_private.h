@@ -197,7 +197,7 @@
 #define MCAN_M_TXBC_TFQM            MCAN_S_TXBC_TFQM(MASK(1))
 
 // MCAN_TXFQS
-#define MCAN_M_TXFQS_TFQF           (0x01UL << 21)
-#define MCAN_M_TXFQS_TFQP           (0x1FUL << 16)
+#define MCAN_M_TXFQS_TFQF           (MASK(1) << 21)
+#define MCAN_M_TXFQS_TFQP           (MASK(5) << 16)
 
 #endif /* MCAN_PRIVATE_H_ */
