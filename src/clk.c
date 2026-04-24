@@ -110,6 +110,12 @@ static void CLK_SelectClkSrc(enum CLK_Src source)
                 CLK_CLKSRCCTL1 = CLK_CLKSRCCTL1 & ~CLK_M_CLKSRCCTL1_OSCCLKSRCSEL
                                | CLKSRC_GetOSCSRC(CLK_Src_XTAL);
             } while(CLK_IsClockFailDetected());
+            if (CLK_status.extMHz == 0.0) {
+                // External frequency is not set. Stop initialization
+                // HAL_FATAL(HAL_ErrorCode_InvalidState, 0U, 0U);
+                ESTOP0;
+                while(1);
+            }
             CLK_status.sourceMHz = CLK_status.extMHz;
             break;
 
@@ -129,6 +135,12 @@ static void CLK_SelectClkSrc(enum CLK_Src source)
             while(CLK_IsClockFailDetected())
             {
                 ESTOP0;
+            }
+            if (CLK_status.extMHz == 0.0) {
+                // External frequency is not set. Stop initialization
+                // HAL_FATAL(HAL_ErrorCode_InvalidState, 0U, 0U);
+                ESTOP0;
+                while(1);
             }
             CLK_status.sourceMHz = CLK_status.extMHz;
             break;
@@ -353,6 +365,29 @@ bool CLK_SetupClkConfig(enum CLK_CFG config)
             CLK_SelectClkSrc(clkSrc);
         } else {
             CLK_status.source = clkSrc;
+            switch(clkSrc)
+            {
+                case CLK_Src_INTOSC2:
+                    CLK_status.sourceMHz = 10.0;
+                    break;
+                case CLK_Src_XTAL:
+                case CLK_Src_EXT:
+                    if (CLK_status.extMHz == 0.0) {
+                        // External frequency is not set. Stop initialization
+                        // HAL_FATAL(HAL_ErrorCode_InvalidState, 0U, 0U);
+                        ESTOP0;
+                        while(1);
+                    }
+                    CLK_status.sourceMHz = CLK_status.extMHz;
+                    break;
+                case CLK_Src_INTOSC1:
+                    CLK_status.sourceMHz = 10.0;
+                    break;
+                default:
+                    // Default DCC Clock Source 0 is INTOSC1
+                    CLK_status.sourceMHz = 10.0;
+                    break;
+            }
         }
 
         // If PLL is bypassed (either because it is not initialized, or powered down in the lines above)
@@ -402,7 +437,7 @@ void CLK_SetCLKSRCCTL2(uint16_t shift, uint16_t value)
     CLK_CLKSRCCTL2 = CLK_CLKSRCCTL2 & ~(CLK_M_CLKSRCCTL2 << shift) | (value << shift);
 }
 
-bool CLK_SetupClkOut(enum CLK_OutSrc source, enum CLK_OutDiv div)
+void CLK_SetupClkOut(enum CLK_OutSrc source, enum CLK_OutDiv div)
 {
     CLK_CLKSRCCTL3 = source;
     CLK_XCLKOUTDIVSEL = div;

@@ -86,7 +86,7 @@ void CLK_EnterExtFreqMHz(float freqMHz);
 bool CLK_SetupClkConfig(enum CLK_CFG config);
 void CLK_SetupDownclock(uint16_t ratio);
 void CLK_SetCLKSRCCTL2(uint16_t shift, uint16_t value);
-bool CLK_SetupClkOut(enum CLK_OutSrc source, enum CLK_OutDiv div);
+void CLK_SetupClkOut(enum CLK_OutSrc source, enum CLK_OutDiv div);
 
 
 
