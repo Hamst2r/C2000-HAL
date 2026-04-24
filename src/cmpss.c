@@ -109,14 +109,14 @@ enum CMPSS_CMP CMPSS_SetupSingle(enum AnalogPin pin, enum CMPSS_CMP cmp, enum CM
     {
         // Specified CMP is not available to specified analog pin. Stop the code
         // TODO: Report error here
-        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)pin, (uint32_t)cmp);
+//        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)pin, (uint32_t)cmp);
     }
 
     if(!CMPSS_GrabCMP(cmp))
     {
         // CMP has been occupied. Stop the code
         // TODO: Report error here
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)cmp, 0U);
+//        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)cmp, 0U);
     }
     
     ANALOG_SetCmpPMux(pin, cmp);
@@ -145,14 +145,14 @@ enum CMPSS_CMP CMPSS_SetupWindow(enum AnalogPin pin, uint16_t upperThreshold, ui
     {
         // Specified CMP is not available to specified analog pin. Stop the code
         // TODO: Report error here
-        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)pin, (uint32_t)cmp);
+//        HAL_FATAL(HAL_ErrorCode_InvalidArgument, (uint32_t)pin, (uint32_t)cmp);
     }
 
     if(!CMPSS_GrabCMP(cmp))
     {
         // CMP has been occupied. Stop the code
         // TODO: Report error here
-        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)cmp, 0U);
+//        HAL_FATAL(HAL_ErrorCode_ResourceConflict, (uint32_t)cmp, 0U);
     }
 
     ANALOG_SetCmpPMux(pin, hiCmp);

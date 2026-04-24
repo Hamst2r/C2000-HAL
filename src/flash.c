@@ -31,7 +31,7 @@ enum FLASH_PumpPwr
 #pragma CODE_SECTION(FLASH_DisablePrefetch, ".TI.ramfunc");
 
 #pragma CODE_SECTION(FLASH_EnableECC, ".TI.ramfunc");
-#pragma CODE_SECTION(FLASH_DisableECC, ".TI.ramfunc");
+//#pragma CODE_SECTION(FLASH_DisableECC, ".TI.ramfunc");
 
 #pragma CODE_SECTION(FLASH_Init, ".TI.ramfunc");
 

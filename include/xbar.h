@@ -3,7 +3,7 @@
 
 #include "base.h"
 #include "support_xbar.h"
-//#include "cmpss.h"
+#include "cmpss.h"
 #include "epwm.h"
 
 //
@@ -60,7 +60,7 @@ static inline void XBAR_ClearFWSD(void)
 // ePWM XBAR (Trip) submodule
 //
 
-//enum EPWM_DcSrc XBAR_Trip_SetupCMPSS(enum XBAR_Trip trip, enum CMPSS_CMP cmp);
+enum EPWM_DcSrc XBAR_Trip_SetupCMPSS(enum XBAR_Trip trip, enum CMPSS_CMP cmp);
 
 static inline uint32_t XBAR_Trip_GetEnable(enum XBAR_Trip trip)
 {

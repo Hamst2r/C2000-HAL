@@ -107,56 +107,6 @@ void INTR_Enable(enum INTR_Src src)
     INTR_RestoreGlobal(intStatus);
 }
 
-void INTR_Disable(enum INTR_Src src)
-{
-    uint16_t intStatus;
-    uint16_t vectorID;
-    enum INTR_Grp group;
-    uint16_t mask;
-
-    vectorID = INTR_GetVectorID(src);
-
-    // Globally disable interrupts but save status
-    intStatus = INTR_DisableGlobal();
-
-    // PIE Interrupts
-    if(vectorID >= 0x20U)
-    {
-        group = INTR_GetGroup(src);
-        mask  = 1U << (group - 1U);
-
-        // Disable individual PIE interrupt
-        INTR_PIE_IER(group) &= ~(1U << INTR_GetChannel(src));
-
-        // Wait for any pending interrupts to get to the CPU
-        SYS_NOP(5);
-
-        INTR_ClearIFR(mask);
-
-        // Acknowledge any interrupts
-        INTR_PIE_ACK = mask;
-    }
-
-    // INT13, INT14, DLOGINT, & RTOSINT
-    else if((vectorID >= 0x0DU) && (vectorID <= 0x10U))
-    {
-        mask = 1U << (vectorID - 1U);
-
-        IER &= ~mask;
-        // Wait for any pending interrupts to get to the CPU
-        SYS_NOP(5);
-
-        INTR_ClearIFR(mask);
-    }
-    else
-    {
-        // Other interrupts
-    }
-
-    // Restore gloabl interrupt status
-    INTR_RestoreGlobal(intStatus);
-}
-
 static void INTR_ClearIFR(uint16_t mask)
 {
     switch(mask)
@@ -216,6 +166,56 @@ static void INTR_ClearIFR(uint16_t mask)
             ESTOP0;
             while(1);
     }
+}
+
+void INTR_Disable(enum INTR_Src src)
+{
+    uint16_t intStatus;
+    uint16_t vectorID;
+    enum INTR_Grp group;
+    uint16_t mask;
+
+    vectorID = INTR_GetVectorID(src);
+
+    // Globally disable interrupts but save status
+    intStatus = INTR_DisableGlobal();
+
+    // PIE Interrupts
+    if(vectorID >= 0x20U)
+    {
+        group = INTR_GetGroup(src);
+        mask  = 1U << (group - 1U);
+
+        // Disable individual PIE interrupt
+        INTR_PIE_IER(group) &= ~(1U << INTR_GetChannel(src));
+
+        // Wait for any pending interrupts to get to the CPU
+        SYS_NOP(5);
+
+        INTR_ClearIFR(mask);
+
+        // Acknowledge any interrupts
+        INTR_PIE_ACK = mask;
+    }
+
+    // INT13, INT14, DLOGINT, & RTOSINT
+    else if((vectorID >= 0x0DU) && (vectorID <= 0x10U))
+    {
+        mask = 1U << (vectorID - 1U);
+
+        IER &= ~mask;
+        // Wait for any pending interrupts to get to the CPU
+        SYS_NOP(5);
+
+        INTR_ClearIFR(mask);
+    }
+    else
+    {
+        // Other interrupts
+    }
+
+    // Restore gloabl interrupt status
+    INTR_RestoreGlobal(intStatus);
 }
 
 

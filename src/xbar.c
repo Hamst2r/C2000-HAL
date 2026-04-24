@@ -21,28 +21,28 @@ enum EPWM_DcSrc XBAR_Trip_SetupSource(enum XBAR_Trip trip, enum XBAR_TripSrc sou
 
 }
 
-// enum EPWM_DcSrc XBAR_Trip_SetupCMPSS(enum XBAR_Trip trip, enum CMPSS_CMP cmp)
-// {
-//     enum CMPSS cmpss = CMPSS_CMP_GetCMPSS(cmp);
-//     enum EPWM_DcSrc src;
-//     switch(CMPSS_CMP_GetHL(cmp))
-//     {
-//         case CMPSS_CMPH:
-//             src = XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2)   | 0));
-//             break;
+ enum EPWM_DcSrc XBAR_Trip_SetupCMPSS(enum XBAR_Trip trip, enum CMPSS_CMP cmp)
+ {
+     enum CMPSS cmpss = CMPSS_CMP_GetCMPSS(cmp);
+     enum EPWM_DcSrc src;
+     switch(CMPSS_CMP_GetHL(cmp))
+     {
+         case CMPSS_CMPH:
+             src = XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2)   | 0));
+             break;
             
-//         case CMPSS_CMPL:
-//             src = XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2+1) | 0));
-//             break;
+         case CMPSS_CMPL:
+             src = XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2+1) | 0));
+             break;
 
-//         case CMPSS_CMPHL:
-//             XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2) | 0));
-//             src = XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2+1) | 0));
-//             break;
+         case CMPSS_CMPHL:
+             XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2) | 0));
+             src = XBAR_Trip_SetupSource(trip, (enum XBAR_TripSrc)(XBAR_S_SRC_MUX_NUM(cmpss*2+1) | 0));
+             break;
 
-//     }
-//     return src;
-// }
+     }
+     return src;
+ }
 
 void XBAR_Trip_SetupInvert(enum XBAR_Trip trip, bool invert)
 {
