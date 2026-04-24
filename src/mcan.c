@@ -1090,12 +1090,11 @@ void MCAN_Legacy_Setup(void)
 /**
  * @brief Configure legacy standard-ID acceptance filter.
  *
- * If simultaneousMsgs = 0, clear all standard filters and accept all to FIFO0.
+ * If simultaneousMsgs = 0, clear all standard filters and discard non-matching frames.
  *
  * @param address Standard ID to accept.
  * @param dontCares Bits that the filter should ignore
- * @param simultaneousMsgs Nonzero enables a dedicated filter, zero resets
- *                         to default behavior.
+ * @param simultaneousMsgs Nonzero configures a filter, zero resets all filters.
  */
 void MCAN_Legacy_FilterAdd(uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs)
 {
@@ -1111,7 +1110,7 @@ void MCAN_Legacy_FilterAdd(uint16_t address, uint16_t dontCares, uint16_t simult
 
     if(!simultaneousMsgs)
     {
-        // Reset standard filter table and route all non-matching frames to FIFO0.
+        // Reset standard filter table and discard non-matching frames.
         MCAN_ResetFilters(mcan);
         MCAN_SetupFilter(mcan, MCAN_ID_Standard, MCAN_FilterNonMatch_Discard, false);
     }
