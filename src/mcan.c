@@ -425,16 +425,16 @@ static void MCAN_SelfTest(enum MCAN mcan)
     txTimeUs = arbiTxTimeUs + dataTxTimeUs;
 
     // timeout for waiting for message to be received. Set to 3 times of the expected transmission time.
-    timeout = TIMER_GetExpiryTime(10*txTimeUs);
+    timeout = TIMER_GetExpiryTime(3*txTimeUs);
 
     while(MCAN_IsRxFIFOEmpty(mcan, MCAN_Rx_FIFO0))
     {
-//        if (TIMER_HasExpired(timeout)) {
-//            // Do not receive message within expected timeframe, self-test failed
-//            // HAL_FATAL(HAL_ErrorCode_Timeout, (uint32_t)mcan, 2U);
-//            ESTOP0;
-//            while(1);
-//        }
+       if (TIMER_HasExpired(timeout)) {
+           // Do not receive message within expected timeframe, self-test failed
+           // HAL_FATAL(HAL_ErrorCode_Timeout, (uint32_t)mcan, 2U);
+           ESTOP0;
+           while(1);
+       }
     }
 
     MCAN_ReadRxFIFO(mcan, MCAN_Rx_FIFO0, &rxMessage);
