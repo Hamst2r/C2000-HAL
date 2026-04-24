@@ -1065,6 +1065,8 @@ void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *
 
 #ifdef MCAN_LEGACY_MODE_SUPPORT
 
+#define MCAN_LEGACY_MODULE  MCAN_A
+
 /**
  * @brief Configure legacy compatibility mode defaults.
  *
@@ -1072,14 +1074,16 @@ void MCAN_ReadRxBuffer(enum MCAN mcan, uint16_t bufferNum, struct MCAN_Message *
  *
  * @param mcan Target MCAN instance.
  */
-void MCAN_Legacy_Setup(enum MCAN mcan)
+void MCAN_Legacy_Setup(void)
 {
-   MCAN_SetupClassic(mcan, 10, 4, 125);
+    enum MCAN mcan = MCAN_LEGACY_MODULE;
 
-   MCAN_SetupTx(mcan, MCAN_TxQueueMode_FIFO, MCAN_DataSize_8Byte, 0, 32);
-   MCAN_SetupRx(mcan, MCAN_Rx_FIFO0, MCAN_DataSize_8Byte, 64);
+    MCAN_SetupClassic(mcan, 10, 4, 125);
 
-   MCAN_ExitInitMode(mcan);
+    MCAN_SetupTx(mcan, MCAN_TxQueueMode_FIFO, MCAN_DataSize_8Byte, 0, 32);
+    MCAN_SetupRx(mcan, MCAN_Rx_FIFO0, MCAN_DataSize_8Byte, 64);
+
+    MCAN_ExitInitMode(mcan);
 }
 
 
@@ -1088,17 +1092,17 @@ void MCAN_Legacy_Setup(enum MCAN mcan)
  *
  * If simultaneousMsgs = 0, clear all standard filters and accept all to FIFO0.
  *
- * @param mcan Target MCAN instance.
  * @param address Standard ID to accept.
- * @param dontCares Unused legacy parameter.
+ * @param dontCares Bits that the filter should ignore
  * @param simultaneousMsgs Nonzero enables a dedicated filter, zero resets
  *                         to default behavior.
  */
-void MCAN_Legacy_FilterAdd(enum MCAN mcan, uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs)
+void MCAN_Legacy_FilterAdd(uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs)
 {
-    static uint16_t filtersAdded[MCAN_COUNT] = {0};
     uint16_t filterID;
     uint16_t filterMask;
+
+    enum MCAN mcan = MCAN_LEGACY_MODULE;
 
     filterID = address & MASK(11);
     filterMask = (~dontCares) & MASK(11);
@@ -1108,21 +1112,13 @@ void MCAN_Legacy_FilterAdd(enum MCAN mcan, uint16_t address, uint16_t dontCares,
     if(!simultaneousMsgs)
     {
         // Reset standard filter table and route all non-matching frames to FIFO0.
-        MCAN_SetupFilter(mcan, MCAN_ID_Standard, MCAN_FilterNonMatch_FIFO0, false);
-        filtersAdded[mcan] = 0;
+        MCAN_ResetFilters(mcan);
+        MCAN_SetupFilter(mcan, MCAN_ID_Standard, MCAN_FilterNonMatch_Discard, false);
     }
-    else if((filtersAdded[mcan] + simultaneousMsgs) <= 128U)
+    else
     {
-        for(uint16_t ix = 0; ix < simultaneousMsgs; ix++)
-        {
-            MCAN_AddFilter(mcan,
-                           MCAN_ID_Standard,
-                           MCAN_FilterType_ID_Mask,
-                           MCAN_FilterDest_FIFO0,
-                           filterID,
-                           filterMask);
-        }
-        filtersAdded[mcan] += simultaneousMsgs;
+        // Since we use FIFO with 64 slots, number of simultaneous messages no longer matter for the Legacy support (legacy only need maximum of 16)
+        MCAN_AddFilter(mcan, MCAN_ID_Standard, MCAN_FilterType_ID_Mask, MCAN_FilterDest_FIFO0, filterID, filterMask);
     }
 
     MCAN_ExitInitMode(mcan);
@@ -1132,13 +1128,14 @@ void MCAN_Legacy_FilterAdd(enum MCAN mcan, uint16_t address, uint16_t dontCares,
 /**
  * @brief Send one legacy CAN message using the MCAN queue API.
  *
- * @param mcan Target MCAN instance.
  * @param msg Legacy message container.
  * @return true Message accepted for transmission.
  * @return false TX queue/FIFO is full.
  */
-bool MCAN_Legacy_Send(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
+bool MCAN_Legacy_Send(struct MCAN_Legacy_canMsg *msg)
 {
+    enum MCAN mcan = MCAN_LEGACY_MODULE;
+
     // Convert legacy message format to new format
     struct MCAN_Message message = 
     {
@@ -1158,13 +1155,14 @@ bool MCAN_Legacy_Send(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
 /**
  * @brief Receive one legacy CAN message from RX FIFO0.
  *
- * @param mcan Target MCAN instance.
  * @param msg Output legacy message container.
  * @return true One message was read and unpacked.
  * @return false No message available.
  */
-bool MCAN_Legacy_Receive(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg)
+bool MCAN_Legacy_Receive(struct MCAN_Legacy_canMsg *msg)
 {
+    enum MCAN mcan = MCAN_LEGACY_MODULE;
+
     struct MCAN_Message message = {0};
 
     if(MCAN_IsRxFIFOEmpty(mcan, MCAN_Rx_FIFO0))

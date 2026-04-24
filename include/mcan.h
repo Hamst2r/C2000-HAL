@@ -180,11 +180,11 @@ bool MCAN_SendQueue(enum MCAN mcan, struct MCAN_Message *message);
 
 
 #ifdef MCAN_LEGACY_MODE_SUPPORT
-void MCAN_Legacy_Setup(enum MCAN mcan);
-void MCAN_Legacy_AddFilter(enum MCAN mcan, uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs);
-bool MCAN_Legacy_Send(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg);
-bool MCAN_Legacy_Receive(enum MCAN mcan, struct MCAN_Legacy_canMsg *msg);
-void MCAN_Legacy_FilterAdd(enum MCAN mcan, uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs);
+void MCAN_Legacy_Setup(void);
+void MCAN_Legacy_AddFilter(uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs);
+bool MCAN_Legacy_Send(struct MCAN_Legacy_canMsg *msg);
+bool MCAN_Legacy_Receive(struct MCAN_Legacy_canMsg *msg);
+void MCAN_Legacy_FilterAdd(uint16_t address, uint16_t dontCares, uint16_t simultaneousMsgs);
 #endif /* MCAN_LEGACY_MODE_SUPPORT */
 
 #endif /* MCAN_H */
