@@ -49,11 +49,13 @@
 #define MCAN_XIDFC(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0x88)    // MCAN Extended ID Filter Configuration
 #define MCAN_XIDAM(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0x90)    // MCAN Extended ID and Mask
 #define MCAN_HPMS(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0x94)    // MCAN High Priority Message Status
-#define MCAN_NDAT1(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0x98)    // MCAN New Data 1
-#define MCAN_NDAT2(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0x9C)    // MCAN New Data 2
-#define MCAN_RXFxC(mcan,fifo)    ATOMIC32(MCAN_BASE(mcan) + 0xA0 + (fifo * 0x10))    // MCAN Rx FIFO 0/1 Configuration
-#define MCAN_RXFxS(mcan,fifo)    ATOMIC32(MCAN_BASE(mcan) + 0xA4 + (fifo * 0x10))    // MCAN Rx FIFO 0/1 Status
-#define MCAN_RXFxA(mcan,fifo)    ATOMIC32(MCAN_BASE(mcan) + 0xA8 + (fifo * 0x10))    // MCAN Rx FIFO 0/1 Acknowledge
+#define MCAN_NDAT(mcan,buffer)  ATOMIC32(MCAN_BASE(mcan) + 0x98 + (((buffer) >> 5) * 4))    // MCAN New Data 1/2
+#define MCAN_RXF0C(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xA0)    // MCAN Rx FIFO 0 Configuration
+#define MCAN_RXF0S(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xA4)    // MCAN Rx FIFO 0 Status
+#define MCAN_RXF0A(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xA8)    // MCAN Rx FIFO 0 Acknowledge
+#define MCAN_RXF1C(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xB0)    // MCAN Rx FIFO 1 Configuration
+#define MCAN_RXF1S(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xB4)    // MCAN Rx FIFO 1 Status
+#define MCAN_RXF1A(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xB8)    // MCAN Rx FIFO 1 Acknowledge
 #define MCAN_RXBC(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0xAC)    // MCAN Rx Buffer Configuration
 #define MCAN_RXESC(mcan)    ATOMIC32(MCAN_BASE(mcan) + 0xBC)    // MCAN Rx Buffer / FIFO Element Size Configuration
 #define MCAN_TXBC(mcan)     ATOMIC32(MCAN_BASE(mcan) + 0xC0)    // MCAN Tx Buffer Configuration
@@ -146,10 +148,6 @@
 #define MCAN_M_GFC_ANFE             MCAN_S_GFC_ANFE(MASK(2))
 #define MCAN_M_GFC_ANFS             MCAN_S_GFC_ANFS(MASK(2))
 
-// Common message RAM start-address field for SIDFC/XIDFC/RXFxC/RXBC/TXBC
-#define MCAN_S_SA(x)                ((uint32_t)(x) << 2U)
-#define MCAN_M_SA                   MCAN_S_SA(MASK(14))
-
 // MCAN_SIDFC
 #define MCAN_S_SIDFC_LSS(x)         ((uint32_t)(x) << 16U)
 #define MCAN_M_SIDFC_LSS            MCAN_S_SIDFC_LSS(MASK(8))
@@ -167,6 +165,10 @@
 #define MCAN_M_RXESC_F1DS           MCAN_S_RXESC_F1DS(MASK(3))
 #define MCAN_M_RXESC_RBDS           MCAN_S_RXESC_RBDS(MASK(3))
 
+// Common message RAM start-address field for SIDFC/XIDFC/RXFxC/RXBC/TXBC
+#define MCAN_S_SA(x)                ((uint32_t)(x) << 2U)
+#define MCAN_M_SA                   MCAN_S_SA(MASK(14))
+
 // MCAN_RXF0C / MCAN_RXF1C
 #define MCAN_S_RXFxC_FxS(x)         ((uint32_t)(x) << 16U)
 
@@ -183,17 +185,16 @@
 #define MCAN_S_RXFxA_FxAI(x)        ((uint32_t)(x) << 0U)
 
 // MCAN_TXBC
-#define MCAN_S_TXBC_TBSA(x)         ((uint32_t)(x) << 2U)
 #define MCAN_S_TXBC_NDTB(x)         ((uint32_t)(x) << 16U)
 #define MCAN_S_TXBC_TFQS(x)         ((uint32_t)(x) << 24U)
 #define MCAN_S_TXBC_TFQM(x)         ((uint32_t)(x) << 30U)
 
-#define MCAN_M_TXBC_TBSA            MCAN_S_TXBC_TBSA(MASK(14))
 #define MCAN_M_TXBC_NDTB            MCAN_S_TXBC_NDTB(MASK(6))
 #define MCAN_M_TXBC_TFQS            MCAN_S_TXBC_TFQS(MASK(6))
 #define MCAN_M_TXBC_TFQM            MCAN_S_TXBC_TFQM(MASK(1))
 
 // MCAN_TXFQS
+#define MCAN_M_TXFQS_TFFL           (MASK(6) <<  0)
 #define MCAN_M_TXFQS_TFQF           (MASK(1) << 21)
 #define MCAN_M_TXFQS_TFQP           (MASK(5) << 16)
 
